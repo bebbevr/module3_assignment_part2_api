@@ -3,24 +3,31 @@ from flask_cors import CORS
 import pickle
 
 app = Flask(__name__)
-CORS(app)  # Tillåter frontend att göra anrop till backend
+CORS(app, resources={r"/*": {"origins": "*"}})  # Tillåter anrop från alla domäner
 
-# Ladda in den tränade modellen
+# Ladda modellen
 with open("sentiment_model.pkl", "rb") as file:
     model = pickle.load(file)
 
+@app.route('/')
+def home():
+    return jsonify({"message": "API is running!"})
+
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.json  # Tar emot JSON-data
-    text = data.get("text", "")
+    try:
+        data = request.json
+        text = data.get("text", "")
 
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
+        if not text:
+            return jsonify({"error": "No text provided"}), 400
 
-    # Förutsäg sentiment
-    sentiment = model.predict([text])[0]
+        sentiment = model.predict([text])[0]
+        return jsonify({"sentiment": sentiment})
 
-    return jsonify({"sentiment": sentiment})
+    except Exception as e:
+        print(f"Error in prediction: {e}")  # Logga felet
+        return jsonify({"error": "Internal Server Error"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
